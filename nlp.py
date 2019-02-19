@@ -1,9 +1,7 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
-import numpy as np
-import io
 from gensim.models import FastText
+import re
 
 '''
 Embedding:  Funzione che carica il modello di word-embedding.
@@ -54,6 +52,17 @@ class NLP(nn.Module):
         nn.init.normal_(self.f1.weight, std=1)
         nn.init.normal_(self.f1.bias, std=0.01)
 
+    @staticmethod
+    def clean_text(text):
+        text = text.lower()
+        text = re.sub('<br />', '', text)
+        text = re.sub('(\n|\r|\t)+', ' ', text)
+        text = re.sub('ß', 'ss', text)
+        text = re.sub('’', "'", text)
+        text = re.sub('[^a-zA-Z0-9.!?,;:\-\' äàâæçéèêîïíìöôóòœüûüúùÿ]+', '', text)
+        text = re.sub(' +', ' ', text)
+        return text
+
     def word2tensor(self, word):
         try:
             w = torch.tensor(self.words.wv[word]).to(self.device)
@@ -66,7 +75,7 @@ class NLP(nn.Module):
         # Ogni token della frase viene trasformato in un vettore
         sentence = []
         for i in range(len(df)):
-            word = str(df.values[i][1]).replace("'",'').replace('\t', '').replace('\n', '').lower()
+            word = self.clean_text(str(df.values[i][1]))
             if word == '':
                 word = '<unk>'
             w = self.word2tensor(word)
