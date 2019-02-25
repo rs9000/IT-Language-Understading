@@ -7,9 +7,9 @@ import io
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--word_embed', type=str, default="../fasttext.bin",
+    parser.add_argument('--word_embed', type=str, default="/nas/softechict/Text-ITA/fasttext.bin",
                         help='Word embed (bin)', metavar='')
-    parser.add_argument('--output', type=str, default="./fasttext.db",
+    parser.add_argument('--output', type=str, default="./fasttext2.db",
                         help='Output sqlite', metavar='')
     return parser.parse_args()
 
@@ -18,6 +18,7 @@ def loadEmbedding(filename):
     print("Loading Word Embedding...")
     it_model = FastText.load_fasttext_format(filename, full_model=False)
     print("...Done!")
+    print("Building Sqlite DB....")
     return it_model
 
 
@@ -62,7 +63,16 @@ def build_db(itmodel, output):
     print("Sqlite db successful created! Path: " + str(output))
 
 
+def create_index():
+    print("Creating index to provide fast access to db..")
+    connection = sqlite3.connect(args.output, detect_types=sqlite3.PARSE_DECLTYPES)
+    cursor = connection.cursor()
+    cursor.execute('CREATE UNIQUE INDEX idx ON embeddings (key)')
+    print("...Done!")
+
+
 if __name__ == "__main__":
     args = parse_arguments()
     word_embed = loadEmbedding(args.word_embed)
     build_db(word_embed, args.output)
+    create_index()
