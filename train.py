@@ -9,7 +9,7 @@ import json
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--corpora', type=str, default="../corpora.utf8",
+    parser.add_argument('--corpora', type=str, default="/nas/softechict/Text-ITA/corpora.utf8",
                         help='Corpora dataset', metavar='')
     parser.add_argument('--json', type=str, default="../tags.json",
                         help='Tags annotations', metavar='')
@@ -70,7 +70,7 @@ Args:
 '''
 
 
-def validation(model, data, tags):
+def validation():
 
     acc = 0
     count = 0
@@ -88,10 +88,10 @@ def validation(model, data, tags):
                 acc += 1
             count += 1
 
-        if count > 5000:
+        if count > 1000:
             acc = acc / count
             print("Accuracy: " + str(acc))
-            break
+            return acc
 
 
 '''
@@ -104,18 +104,18 @@ Args:
 '''
 
 
-def train(model, data, tags):
+def train():
 
     print("Start training...")
     criterion = torch.nn.NLLLoss().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
     epoch = 0
-    step = 0
+    max_step = 500
 
-    while epoch < 30:
+    while epoch < 10000:
         print("Epoch: " + str(epoch))
-        for step in range(10000):
+        for step in range(max_step):
             sample = data[step]
             out = model(sample)
 
@@ -130,15 +130,16 @@ def train(model, data, tags):
 
             loss = criterion(out, label)
             loss.backward()
-            writer.add_scalar('Train Loss', loss.item(), step*epoch)
+            writer.add_scalar('Train Loss', loss.item(), step + (max_step*epoch))
             print('Train Loss: ' + str(loss.item()))
             optimizer.step()
             optimizer.zero_grad()
             step += 1
 
-            if step % 5000 == 0:
-                torch.save(model.state_dict(), args.save_model)
         epoch += 1
+        acc = validation()
+        writer.add_scalar('Test Accuracy', acc, epoch)
+        torch.save(model.state_dict(), args.save_model)
 
 
 '''
@@ -161,7 +162,7 @@ if __name__ == "__main__":
 
     if not args.evaluation:
         writer = SummaryWriter()
-        train(model, data, tags)
+        train()
     else:
-        model.load_state_dict(torch.load("checkpoint2.pt"))
-        validation(model, data, tags)
+        model.load_state_dict(torch.load("checkpoint.pt"))
+        validation()
