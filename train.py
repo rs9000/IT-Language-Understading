@@ -17,14 +17,13 @@ def parse_arguments():
                         help='Word embedding file', metavar='')
     parser.add_argument('--word_embed_size', type=int, default=300,
                         help='word embedding vector size', metavar='')
-    parser.add_argument('--save_model', type=str, default='checkpoint.pt',
+    parser.add_argument('--save_model', type=str, default='checkpoint2.pt',
                         help='save model file', metavar='')
     parser.add_argument('--load_model', type=str, default='',
                         help='load model file', metavar='')
     parser.add_argument('--evaluation', type=bool, default=False,
                         help='Evaluate model', metavar='')
     return parser.parse_args()
-
 
 '''
 Dataset: Contiene il corpora italiano.
@@ -43,20 +42,22 @@ class LazyTextDataset(Dataset):
     def __init__(self, filename):
         self.line = []
         self._filename = filename
-        self._file_len = 278911616
+        self._file_len = 277000000
+        self.first_row = pd.DataFrame()
+        col_names = ["0", "1", "2", "3", "4", "5", "6", "7"]
+        self.reader = pd.read_csv(self._filename, sep='\t', header=None, skiprows=12, names=col_names, iterator=True)
 
     def __len__(self):
         return self._file_len
 
     def __getitem__(self, idx):
-        col_names = ["0", "1", "2", "3", "4", "5", "6", "7"]
-        df = pd.read_csv(self._filename, sep='\t', skiprows=idx, nrows=1000, header=None, names=col_names)
-        for i in range(1, len(df)):
-            if str(df.values[i][0]) == str(1):
-                    df = df.head(i)
-                    idx += i + 1
-                    break
-        return df, idx
+        sentence = self.first_row.append(self.reader.get_chunk(1), ignore_index=True)
+        while sentence.values.shape[0] <= 1 or str(sentence.values[-1][0]) != str(1):
+            sentence = sentence.append(self.reader.get_chunk(1))
+
+        self.first_row = sentence.tail(1)
+        sentence.drop(sentence.tail(1).index, inplace=True)
+        return sentence
 
 
 '''
@@ -71,12 +72,12 @@ Args:
 
 def validation(model, data, tags):
 
-    idx = 12
     acc = 0
     count = 0
 
-    while idx < len(data):
-        sample, idx = data[idx]
+    print("Start validation...")
+    for step in range(5000):
+        sample = data[step]
         out = model(sample)
 
         for pred_label, true_label in zip(out, sample.values[:, 7]):
@@ -87,7 +88,7 @@ def validation(model, data, tags):
                 acc += 1
             count += 1
 
-        if count > 50000:
+        if count > 5000:
             acc = acc / count
             print("Accuracy: " + str(acc))
             break
@@ -107,28 +108,37 @@ def train(model, data, tags):
 
     print("Start training...")
     criterion = torch.nn.NLLLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 
     epoch = 0
-    idx = 12
+    step = 0
 
-    while idx < len(data):
-        sample, idx = data[idx]
-        out = model(sample)
+    while epoch < 30:
+        print("Epoch: " + str(epoch))
+        for step in range(10000):
+            sample = data[step]
+            out = model(sample)
 
-        label = []
-        for e in sample.values[:, 7]:
-            label.append(tags.index(str(e)))
-        label = torch.LongTensor(label).to(device)
+            label = []
+            for e in sample.values[:, 7]:
+                if str(e) in tags:
+                    label.append(tags.index(str(e)))
+                else:
+                    print("Found new tag: " + str(e))
+                    label.append(tags.index(str("nan")))
+            label = torch.LongTensor(label).to(device)
 
-        loss = criterion(out, label)
+            loss = criterion(out, label)
+            loss.backward()
+            writer.add_scalar('Train Loss', loss.item(), step*epoch)
+            print('Train Loss: ' + str(loss.item()))
+            optimizer.step()
+            optimizer.zero_grad()
+            step += 1
 
-        loss.backward()
-        print("Loss: " + str(loss.item()))
-        optimizer.step()
-        optimizer.zero_grad()
-
-        torch.save(model.state_dict(), args.save_model)
+            if step % 5000 == 0:
+                torch.save(model.state_dict(), args.save_model)
+        epoch += 1
 
 
 '''
@@ -150,7 +160,8 @@ if __name__ == "__main__":
     model = NLP(args.word_embed, args.word_embed_size, len(tags), device).to(device)
 
     if not args.evaluation:
+        writer = SummaryWriter()
         train(model, data, tags)
     else:
-        model.load_state_dict(torch.load("checkpoint.pt"))
+        model.load_state_dict(torch.load("checkpoint2.pt"))
         validation(model, data, tags)
