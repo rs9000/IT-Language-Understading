@@ -6,17 +6,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import sqlite3
 import numpy
 from embed_to_sqlite import adapt_array, convert_array
+from retrying import retry
 
-
-def read_db(key):
-    sqlite3.register_adapter(numpy.ndarray, adapt_array)
-    sqlite3.register_converter('array', convert_array)
-    # Connect to a local database and create a table for the embeddings
-    connection = sqlite3.connect('./fasttext2.db', detect_types=sqlite3.PARSE_DECLTYPES)
-    cursor = connection.cursor()
-    cursor.execute('SELECT * FROM embeddings WHERE key=?', (key,))
-    data = cursor.fetchone()
-    return data[1] if data else None
 
 '''
 NPL:  Classe del modello
@@ -36,21 +27,25 @@ class NLP(nn.Module):
         self.out_size = out_size
         self.device = device
         self.char_vocab = ['<pad>'] + list(string.printable) + ['à', 'è', 'ì', 'ò', 'ù', '<SOS>', '<EOS>']
+        sqlite3.register_adapter(numpy.ndarray, adapt_array)
+        sqlite3.register_converter('array', convert_array)
+        # Connect to a local database and create a table for the embeddings
+        self.connection = sqlite3.connect('./fasttext2.db', detect_types=sqlite3.PARSE_DECLTYPES)
 
         # Bidirectional GRU
-        self.bi_gru = torch.nn.GRU(input_size=600, hidden_size=200, num_layers=2, batch_first=True,
-                                   bidirectional=True)
+        self.bi_gru = torch.nn.GRU(input_size=350, hidden_size=100, num_layers=2, batch_first=True,
+                                   dropout=0.5, bidirectional=True)
 
-        self.char_gru = torch.nn.GRU(input_size=100, hidden_size=150, num_layers=2, batch_first=True,
-                                     bidirectional=True).to(self.device)
+        self.char_gru = torch.nn.GRU(input_size=50, hidden_size=25, num_layers=2, batch_first=True,
+                                     dropout=0.5, bidirectional=True).to(self.device)
         # Linear Layer
-        self.f1 = torch.nn.Linear(400, self.out_size)
+        self.f1 = torch.nn.Linear(200, self.out_size)
 
         # Activation function: LogSoftmax
         self.probs = nn.LogSoftmax(dim=-1)
 
         # Word Embedding
-        self.char_embed = nn.Embedding(len(self.char_vocab), 100, padding_idx=0).to(self.device)
+        self.char_embed = nn.Embedding(len(self.char_vocab), 50, padding_idx=0).to(self.device)
 
         self.reset_parameters()
 
@@ -77,15 +72,21 @@ class NLP(nn.Module):
         text = re.sub('ß', 'ss', text)
         text = re.sub('’', "'", text)
         text = re.sub('é', 'è', text)
-        text = re.sub('[^a-zA-Z0-9.!?,;:\-\' äàâæçéèêîïíìöôóòœüûüúùÿ]+', '', text)
-        text = re.sub(r'[^{0}\n]'.format(string.printable), '', text)
+        text = re.sub('[^a-zA-Z0-9.!?,;:\-\' àèìòù]+', '', text)
         text = re.sub(' +', ' ', text)
         return text
 
+    @retry(wait_fixed=2000)
+    def read_db(self, key):
+        cursor = self.connection.cursor()
+        cursor.execute('SELECT * FROM embeddings WHERE key=?', (key,))
+        data = cursor.fetchone()
+        return data[1] if data else None
+
     def word2tensor(self, word):
-        word = read_db(word)
+        word = self.read_db(word)
         if word is None:
-            word = read_db("unk")
+            word = self.read_db("unk")
         w = torch.FloatTensor(word).to(self.device)
         return w
 
@@ -97,7 +98,7 @@ class NLP(nn.Module):
         # Word-level embedding
         for i in range(len(df)):
             # Create list of words
-            word = self.clean_text(str(df.values[i][1]))
+            word = self.clean_text(str(df.values[i]))
             if word == "":
                 word = "unk"
             word_sentence.append(word)
