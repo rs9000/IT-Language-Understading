@@ -3,8 +3,12 @@ Deep Learning toolkit to Italian Natural Language Understanding
 <br><br>
 (Work in progress)
 
-#### Word embedding to Sqlite:
+#### Word embedding
+This model require Fasttext or another word embedding <br>
+https://fasttext.cc/docs/en/crawl-vectors.html
 
+#### Word embedding to Sqlite:
+Sqlite provide fast access to word vectors reducing main memory usage
 ```
 usage: embed_to_sqlite.py [-args]
 
