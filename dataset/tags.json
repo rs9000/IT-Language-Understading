@@ -1,0 +1,4 @@
+{ "deprel": ["ROOT","comp","prep","mod","punc","aux","comp_loc","det","obj","con","conj","clit","mod_rel","arg","subj","sub","pred", "pred_loc", "neg","comp_temp","mod_temp","modal","comp_ind","mod_loc","dis","subj_pass","disj","concat","nan"],
+  "xpos": ["SP", "FS", "S", "_", "E", "RD", "A", "FC", "RI", "VA", "VM", "V", "PR", "PI", "FF", "CC", "N", "PC", "AP", "FB", "NO", "B", "I", "T", "PE", "CS", "DI", "BN", "PD", "DD", "DE", "DQ", "PQ", "SW", "PP", "DR", "SYM", "X", "PART", "Sw", "nan"],
+  "upos": ["PROPN", "PUNCT", "NOUN", "_", "ADP", "DET", "ADJ", "AUX", "VERB", "PRON", "FB", "CCONJ", "NUM", "ADV", "INTJ", "SCONJ", "X", "SYM", "PART", "nan"]
+}

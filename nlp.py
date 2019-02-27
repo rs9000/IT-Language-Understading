@@ -2,7 +2,6 @@ import torch
 from torch import nn
 import re
 import string
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import sqlite3
 import numpy
 from embed_to_sqlite import adapt_array, convert_array
@@ -30,7 +29,7 @@ class NLP(nn.Module):
         sqlite3.register_adapter(numpy.ndarray, adapt_array)
         sqlite3.register_converter('array', convert_array)
         # Connect to a local database and create a table for the embeddings
-        self.connection = sqlite3.connect('./fasttext2.db', detect_types=sqlite3.PARSE_DECLTYPES)
+        self.connection = sqlite3.connect(word_embed, detect_types=sqlite3.PARSE_DECLTYPES)
 
         # Bidirectional GRU
         self.bi_gru = torch.nn.GRU(input_size=350, hidden_size=100, num_layers=2, batch_first=True,
@@ -38,8 +37,11 @@ class NLP(nn.Module):
 
         self.char_gru = torch.nn.GRU(input_size=50, hidden_size=25, num_layers=2, batch_first=True,
                                      dropout=0.5, bidirectional=True).to(self.device)
-        # Linear Layer
-        self.f1 = torch.nn.Linear(200, self.out_size)
+        # MLP
+        self.classifier = nn.Sequential(torch.nn.Linear(200, 200),
+                                        nn.ReLU(inplace=True),
+                                        torch.nn.Linear(200, self.out_size)
+                                        )
 
         # Activation function: LogSoftmax
         self.probs = nn.LogSoftmax(dim=-1)
@@ -50,9 +52,6 @@ class NLP(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.normal_(self.f1.weight, std=1)
-        nn.init.normal_(self.f1.bias, std=0.01)
-
         for name, param in self.char_gru.named_parameters():
             if 'weight' in name:
                 nn.init.xavier_normal_(param)
@@ -67,7 +66,6 @@ class NLP(nn.Module):
 
     @staticmethod
     def clean_text(text):
-        text = re.sub('<br />', '', text)
         text = re.sub('(\n|\r|\t)+', ' ', text)
         text = re.sub('ß', 'ss', text)
         text = re.sub('’', "'", text)
@@ -76,7 +74,7 @@ class NLP(nn.Module):
         text = re.sub(' +', ' ', text)
         return text
 
-    @retry(wait_fixed=2000)
+    @retry(wait_fixed=1000)
     def read_db(self, key):
         cursor = self.connection.cursor()
         cursor.execute('SELECT * FROM embeddings WHERE key=?', (key,))
@@ -132,5 +130,5 @@ class NLP(nn.Module):
 
         # L'output della RNN passa in una rete Feedforward
         # attivata da una funzione LogSoftmax
-        out = self.probs(self.f1(out[:,:-1,:].squeeze(0)))
+        out = self.probs(self.classifier(out[:,:-1,:].squeeze(0)))
         return out

@@ -3,7 +3,7 @@ from tensorboardX import SummaryWriter
 import pandas as pd
 import torch
 import argparse
-from torch.utils.data import Dataset
+from data import UD_Dataset, LazyTextDataset
 import json
 import nltk
 from nltk.tokenize import word_tokenize
@@ -11,11 +11,15 @@ from nltk.tokenize import word_tokenize
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--corpora', type=str, default="../corpora.utf8",
-                        help='Corpora dataset', metavar='')
-    parser.add_argument('--json', type=str, default="../tags.json",
+    parser.add_argument('--train_data', type=str, default="./dataset/train.data",
+                        help='Train dataset', metavar='')
+    parser.add_argument('--test_data', type=str, default="./dataset/test.data",
+                        help='Test dataset', metavar='')
+    parser.add_argument('--json', type=str, default="./dataset/tags.json",
                         help='Tags annotations', metavar='')
-    parser.add_argument('--word_embed', type=str, default='../fasttext.bin',
+    parser.add_argument('--tag', type=str, default="xpos",
+                        help='Tags to predict', metavar='')
+    parser.add_argument('--word_embed', type=str, default='./fasttext2.db',
                         help='Word embedding file', metavar='')
     parser.add_argument('--word_embed_size', type=int, default=300,
                         help='word embedding vector size', metavar='')
@@ -28,41 +32,6 @@ def parse_arguments():
     parser.add_argument('--eval', type=str, default="",
                         help='Text sentence', metavar='')
     return parser.parse_args()
-
-
-'''
-Dataset: Contiene il corpora italiano.
-
-Il file viene letto una frase alla volta perchè
-troppo costoso da caricare in Memoria.
-
-__len__ : Restituisce la lunghezza in righe del file.
-__getitem__: Restituisce una frase letta dal file e l'indice di riga
-             dell'ultima lettura.
-'''
-
-
-class LazyTextDataset(Dataset):
-
-    def __init__(self, filename):
-        self.line = []
-        self._filename = filename
-        self._file_len = 277000000
-        self.first_row = pd.DataFrame()
-        col_names = ["0", "1", "2", "3", "4", "5", "6", "7"]
-        self.reader = pd.read_csv(self._filename, sep='\t', header=None, skiprows=12, names=col_names, iterator=True)
-
-    def __len__(self):
-        return self._file_len
-
-    def __getitem__(self, idx):
-        sentence = self.first_row.append(self.reader.get_chunk(1), ignore_index=True)
-        while sentence.values.shape[0] <= 1 or str(sentence.values[-1][0]) != str(1):
-            sentence = sentence.append(self.reader.get_chunk(1))
-
-        self.first_row = sentence.tail(1)
-        sentence.drop(sentence.tail(1).index, inplace=True)
-        return sentence
 
 
 '''
@@ -109,11 +78,11 @@ def validation():
     count = 0
 
     print("Start validation...")
-    for step in range(5000):
-        sample = data[step]
+    for step in range(int(len(data_val)/5)):
+        sample = data_val[step]
         out = model(sample['1'])
 
-        for pred_label, true_label in zip(out, sample.values[:, 7]):
+        for pred_label, true_label in zip(out, sample.values[:, tag_idx]):
             _, pred_label = torch.max(pred_label, 0)
             true_label = tags.index(str(true_label))
 
@@ -121,10 +90,9 @@ def validation():
                 acc += 1
             count += 1
 
-        if count > 1000:
-            acc = acc / count
-            print("Accuracy: " + str(acc))
-            return acc
+    acc = acc / count
+    print("Accuracy: " + str(acc))
+    return acc
 
 
 '''
@@ -141,22 +109,22 @@ def train():
 
     print("Start training...")
     criterion = torch.nn.NLLLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     epoch = 0
     best_val = 0
-    max_step = 5000
+    max_step = 500
 
     acc = validation()
     writer.add_scalar('Test Accuracy', acc, epoch)
     while epoch < 10000:
         print("Epoch: " + str(epoch))
         for step in range(max_step):
-            sample = data[step]
+            sample = data_train[step]
             out = model(sample['1'])
 
             label = []
-            for e in sample.values[:, 7]:
+            for e in sample.values[:, tag_idx]:
                 if str(e) in tags:
                     label.append(tags.index(str(e)))
                 else:
@@ -167,6 +135,7 @@ def train():
             loss = criterion(out, label)
             loss.backward()
             writer.add_scalar('Train Loss', loss.item(), step + (max_step*epoch))
+            torch.nn.utils.clip_grad_value_(model.parameters(), 10)
             #print('Train Loss: ' + str(loss.item()))
             optimizer.step()
             optimizer.zero_grad()
@@ -193,14 +162,15 @@ Vars:
 
 def main():
     if args.eval != "":
-        model.load_state_dict(torch.load("checkpoint.pt"))
+        model.load_state_dict(torch.load(args.save_model))
         val(args.eval)
         return 0
 
     if args.validation:
-        model.load_state_dict(torch.load("checkpoint.pt"))
+        model.load_state_dict(torch.load(args.save_model))
         validation()
     else:
+        model.load_state_dict(torch.load(args.save_model))
         train()
 
     return 0
@@ -211,8 +181,13 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     json_data = open(args.json).read()
-    tags = json.loads(json_data)['d_tags']
-    data = LazyTextDataset(args.corpora)
+    tags = json.loads(json_data)
+    tag_list = ["id", "form", "lemma", "upos", "xpos", "feats", "head", "deprel", "deps", "misc"]
+
+    tags = tags[args.tag]
+    tag_idx = tag_list.index(args.tag)
+
+    data_train, data_val = UD_Dataset(args.train_data, "train"), UD_Dataset(args.test_data, "test")
     model = NLP(args.word_embed, args.word_embed_size, len(tags), device).to(device)
     writer = SummaryWriter()
     main()
