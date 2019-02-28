@@ -28,7 +28,8 @@ arguments:
 usage: train.py [-args]
 
 arguments:
-  --load_model        xpos.pt
+  --load_model        ./checkpoint/xpos.pt
+  --tag               xpos
   --eval              "Asimov scrisse... antologia."
 ```
 
