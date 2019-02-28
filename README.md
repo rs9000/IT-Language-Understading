@@ -1,5 +1,5 @@
 # IT-Language-Understading
-Deep Learning toolkit to Italian Natural Language Understanding
+Deep Learning toolkit for Italian Natural Language Understanding
 <br><br>
 (Work in progress)
 
@@ -19,3 +19,21 @@ arguments:
   --word_embed        Word embedding file (bin)
   --output            Output sqlite database
 ```
+
+#### XPOS tagging
+
+##### Test accuracy: 90.08%
+
+```
+usage: train.py [-args]
+
+arguments:
+  --load_model        xpos.pt
+  --eval              "Asimov scrisse... antologia."
+```
+
+##### Sentence: <br>
+Asimov scrisse diversi racconti degni di nota, molti riguardanti i robot positronici e il Multivac racchiusi nell'antologia.
+
+##### Output: <br>
+Asimov : SP scrisse : V diversi : A racconti : S degni : B di : E nota : S , : FF molti : DI riguardanti : V i : RD robot : S positronici : A e : CC il : RD Multivac : SP racchiusi : B nell'antologia : SP . : FS
