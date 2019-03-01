@@ -20,7 +20,7 @@ arguments:
   --output            Output sqlite database
 ```
 
-#### XPOS tagging
+### XPOS tagging
 
 ##### Test accuracy: 90.63%
 
