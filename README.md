@@ -22,7 +22,7 @@ arguments:
 
 #### XPOS tagging
 
-##### Test accuracy: 90.08%
+##### Test accuracy: 90.63%
 
 ```
 usage: train.py [-args]
@@ -37,4 +37,4 @@ arguments:
 Asimov scrisse diversi racconti degni di nota, molti riguardanti i robot positronici e il Multivac racchiusi nell'antologia.
 
 ##### Output: <br>
-Asimov : SP scrisse : V diversi : A racconti : S degni : B di : E nota : S , : FF molti : DI riguardanti : V i : RD robot : S positronici : A e : CC il : RD Multivac : SP racchiusi : B nell'antologia : SP . : FS
+Asimov : SP scrisse : V diversi : A racconti : S degni : B di : E nota : S , : FF molti : B riguardanti : V i : RD robot : S positronici : A e : CC il : RD Multivac : S racchiusi : A nell'antologia : SP . : FS
