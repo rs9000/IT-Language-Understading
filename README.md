@@ -1,7 +1,6 @@
 # IT-Language-Understading
 Deep Learning toolkit for Italian Natural Language Understanding
 <br><br>
-(Work in progress)
 
 #### Data Source
 https://github.com/UniversalDependencies/UD_Italian-ISDT
@@ -37,6 +36,9 @@ arguments:
   --validation        Compute accuracy (Bool)
   --eval              Tag the provided sentence
 ```
+
+### Train
+<img src="pics/train.jpg" width="600">
 
 ### UPOS tagging
 
