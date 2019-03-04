@@ -20,6 +20,26 @@ arguments:
   --output            Output sqlite database
 ```
 
+### UPOS tagging
+
+##### Test accuracy: 90.70%
+
+```
+usage: train.py [-args]
+
+arguments:
+  --load_model        ./checkpoint/upos.pt
+  --tag               upos
+  --eval              "Asimov scrisse... antologia."
+```
+
+##### Sentence: <br>
+Asimov scrisse diversi racconti degni di nota, molti riguardanti i robot positronici e il Multivac racchiusi nell'antologia.
+
+##### Output: <br>
+Asimov : PROPN scrisse : VERB diversi : ADJ racconti : NOUN degni : ADJ di : ADP nota : NOUN , : PUNCT molti : DET riguardanti : VERB i : DET robot : NOUN positronici : ADJ e : CCONJ il : DET Multivac : NOUN racchiusi : ADJ nell'antologia : PROPN . : PUNCT
+
+
 ### XPOS tagging
 
 ##### Test accuracy: 90.63%
