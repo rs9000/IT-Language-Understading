@@ -20,17 +20,30 @@ arguments:
   --output            Output sqlite database
 ```
 
-### UPOS tagging
-
-##### Test accuracy: 90.70%
+### How to use
 
 ```
 usage: train.py [-args]
 
 arguments:
-  --load_model        ./checkpoint/upos.pt
-  --tag               upos
-  --eval              "Asimov scrisse... antologia."
+  --train_data        Train dataset
+  --test_data         Test dataset
+  --json              Tags json
+  --tag               Tag to predict
+  --word_embed        Word embedding db
+  --word_embed_size   Word embedding vectors size
+  --save_model        Save model to file
+  --load_model        Load model from file
+  --validation        Compute accuracy (Bool)
+  --eval              Tag the provided sentence
+```
+
+### UPOS tagging
+
+##### Test accuracy: 90.70%
+
+```
+train.py --load_model="./checkpoint/upos.pt" --tag="upos" --eval="Asimov scrisse... antologia."
 ```
 
 ##### Sentence: <br>
@@ -45,12 +58,7 @@ Asimov : PROPN scrisse : VERB diversi : ADJ racconti : NOUN degni : ADJ di : ADP
 ##### Test accuracy: 90.63%
 
 ```
-usage: train.py [-args]
-
-arguments:
-  --load_model        ./checkpoint/xpos.pt
-  --tag               xpos
-  --eval              "Asimov scrisse... antologia."
+train.py --load_model="./checkpoint/xpos.pt" --tag="xpos" --eval="Asimov scrisse... antologia."
 ```
 
 ##### Sentence: <br>
