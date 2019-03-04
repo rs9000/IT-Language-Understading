@@ -42,7 +42,7 @@ arguments:
 
 ### UPOS tagging
 
-##### Test accuracy: 90.70%
+##### Test accuracy: 93.04%
 
 ```
 train.py --load_model="./checkpoint/upos.pt" --tag="upos" --eval="Asimov scrisse... antologia."
@@ -52,8 +52,7 @@ train.py --load_model="./checkpoint/upos.pt" --tag="upos" --eval="Asimov scrisse
 Asimov scrisse diversi racconti degni di nota, molti riguardanti i robot positronici e il Multivac racchiusi nell'antologia.
 
 ##### Output: <br>
-Asimov : PROPN scrisse : VERB diversi : ADJ racconti : NOUN degni : ADJ di : ADP nota : NOUN , : PUNCT molti : DET riguardanti : VERB i : DET robot : NOUN positronici : ADJ e : CCONJ il : DET Multivac : NOUN racchiusi : ADJ nell'antologia : PROPN . : PUNCT
-
+Asimov : PROPN scrisse : VERB diversi : ADJ racconti : NOUN degni : ADV di : ADP nota : NOUN , : PUNCT molti : PRON riguardanti : VERB i : DET robot : NOUN positronici : ADJ e : CCONJ il : DET Multivac : PROPN racchiusi : ADJ nell'antologia : PROPN . : PUN
 
 ### XPOS tagging
 
